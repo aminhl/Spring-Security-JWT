@@ -21,30 +21,30 @@ public class AuthenticationService {
 
     public AuthenticationResponse register(RegisterRequest registerRequest) {
         var user = User.builder()
-                .firstname(registerRequest.getFirstname())
-                .lastname(registerRequest.getLastname())
-                .email(registerRequest.getEmail())
+                .firstname(registerRequest.firstname())
+                .lastname(registerRequest.lastname())
+                .email(registerRequest.email())
                 .password(passwordEncoder.encode("password!"))
                 .role(Role.ADMIN)
                 .build();
         userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
-                .token(jwtToken).build();
+                .accessToken(jwtToken).build();
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest) {
         authenticationManager.authenticate(
                new UsernamePasswordAuthenticationToken(
-                       authenticationRequest.getEmail(),
-                       authenticationRequest.getPassword()
+                       authenticationRequest.email(),
+                       authenticationRequest.password()
                )
         );
-        var user = userRepository.findByEmail(authenticationRequest.getEmail())
+        var user = userRepository.findByEmail(authenticationRequest.email())
                 .orElseThrow();
         System.out.println(user);
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder().
-                token(jwtToken).build();
+                accessToken(jwtToken).build();
     }
 }
