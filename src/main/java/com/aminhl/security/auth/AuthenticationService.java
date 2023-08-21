@@ -37,9 +37,12 @@ public class AuthenticationService {
                 .build();
         userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
         saveUserToken(user, jwtToken);
         return AuthenticationResponse.builder()
-                .accessToken(jwtToken).build();
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest) {
@@ -52,10 +55,13 @@ public class AuthenticationService {
         var user = userRepository.findByEmail(authenticationRequest.email())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
         revokeAllUserValidTokens(user);
         saveUserToken(user, jwtToken);
-        return AuthenticationResponse.builder().
-                accessToken(jwtToken).build();
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 
     private void saveUserToken(User user, String jwtToken) {

@@ -17,6 +17,8 @@ import java.util.function.Function;
 @Service
 public class JwtService {
     private static final String SECRET_KEY = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+    private static final long JWT_EXPIRATION = 86400000; // 1 day
+    private static final long REFRESH_TOKEN_EXPIRATION = 604800000; // 7 days
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -35,14 +37,26 @@ public class JwtService {
             Map<String, Object> extraClaims,
             UserDetails userDetails
             ){
-                return Jwts
-                        .builder()
-                        .setClaims(extraClaims)
-                        .setSubject(userDetails.getUsername())
-                        .setIssuedAt(new Date(System.currentTimeMillis()))
-                        .setExpiration(new Date(System.currentTimeMillis() + 1000*60*60*24))
-                        .signWith(getSigninKey(), SignatureAlgorithm.HS256)
-                        .compact();
+            return buildToken(extraClaims, userDetails, JWT_EXPIRATION);
+    }
+
+    public String generateRefreshToken(UserDetails userDetails){
+        return buildToken(new HashMap<>(), userDetails, REFRESH_TOKEN_EXPIRATION);
+    }
+
+    public String buildToken(
+            Map<String, Object> extraClaims,
+            UserDetails userDetails,
+            long expiration
+    ){
+        return Jwts
+                .builder()
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigninKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails){
