@@ -1,5 +1,7 @@
 package com.aminhl.security.config;
 
+import com.aminhl.security.token.Token;
+import com.aminhl.security.token.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -39,7 +42,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         userEmail = jwtService.extractUsername(jwtToken);
         if(userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null){
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-            if (jwtService.isTokenValid(jwtToken, userDetails)){
+            final boolean isTokenValid = tokenRepository.findTokenByToken(jwtToken)
+                    .map(token -> !token.isExpired() && !token.isRevoked())
+                    .orElse(false);
+            if (jwtService.isTokenValid(jwtToken, userDetails) && isTokenValid){
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
