@@ -24,7 +24,7 @@ public class AuthenticationService {
                 .firstname(registerRequest.firstname())
                 .lastname(registerRequest.lastname())
                 .email(registerRequest.email())
-                .password(passwordEncoder.encode("password!"))
+                .password(passwordEncoder.encode(registerRequest.password()))
                 .role(Role.ADMIN)
                 .build();
         userRepository.save(user);
