@@ -7,12 +7,20 @@ import com.aminhl.security.token.TokenType;
 import com.aminhl.security.user.Role;
 import com.aminhl.security.user.User;
 import com.aminhl.security.user.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.List;
 
 import static com.aminhl.security.token.TokenType.BEARER;
@@ -84,5 +92,26 @@ public class AuthenticationService {
             token.setRevoked(true);
         });
         tokenRepository.saveAll(userValidTokens);
+    }
+
+    public void refreshToken(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return;
+        final String refreshToken = authHeader.substring(7);
+        final String userEmail = jwtService.extractUsername(refreshToken);
+        final User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("username " + userEmail + " not found!"));
+        if (jwtService.isTokenValid(refreshToken, user)){
+            final String accessToken = jwtService.generateToken(user);
+            revokeAllUserValidTokens(user);
+            saveUserToken(user, accessToken);
+            final AuthenticationResponse authResponse
+                    = AuthenticationResponse.builder()
+                                            .accessToken(accessToken)
+                                            .refreshToken(refreshToken)
+                                            .build();
+            new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
+        }
     }
 }
